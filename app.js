@@ -312,8 +312,8 @@ function cardTemplate(post) {
 }
 
 function renderStats(postsAll) {
-  if (dom.pinsCount) dom.pinsCount.textContent = `${postsAll.length}`;
-  if (dom.likesCount) dom.likesCount.textContent = `${postsAll.reduce((s, p) => s + (p.likes || 0), 0)}`;
+  if(dom.pinsCount)dom.pinsCount.textContent = `${postsAll.length}`;
+  if(dom.likesCount)dom.likesCount.textContent = `${postsAll.reduce((s, p) => s + (p.likes || 0), 0)}`;
 }
 
 async function renderStorage() {
