@@ -1,5 +1,6 @@
 node_modules/
 data/posts.json
+data/users.json
 uploads/
 .env
 .env.*

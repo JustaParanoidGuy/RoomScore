@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RoomScore — Interior Pins</title>
     <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // Apply saved theme before paint to avoid flash
+      if (localStorage.getItem("roomscore_theme_v1") === "light") {
+        document.documentElement.classList.add("light");
+      }
+    </script>
   </head>
   <body>
     <header class="topbar">
@@ -63,6 +69,12 @@
         <label class="btn btnGhost" for="importInput">Import</label>
         <input id="importInput" type="file" accept="application/json" hidden />
         <button class="btn btnGhost" id="authBtn" type="button">Sign in</button>
+        <button class="themeToggle" id="themeToggle" type="button" aria-label="Toggle light/dark mode">
+          <span class="themeToggle__track">
+            <span class="themeToggle__thumb"></span>
+          </span>
+          <span class="themeToggle__icon" id="themeIcon">🌙</span>
+        </button>
         <button class="btn" id="newPinBtn" type="button">Upload</button>
       </div>
     </header>

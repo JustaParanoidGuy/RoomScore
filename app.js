@@ -3,6 +3,27 @@ function apiUrl(path) { return path.startsWith("/") ? path : `/${path}`; }
 
 const LIKED_KEY = "roomscore_liked_v1";
 const AUTH_KEY  = "roomscore_auth_v1";
+const THEME_KEY = "roomscore_theme_v1";
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+
+function applyTheme(theme) {
+  document.documentElement.classList.toggle("light", theme === "light");
+  const icon = document.getElementById("themeIcon");
+  if (icon) icon.textContent = theme === "light" ? "☀️" : "🌙";
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY) || "dark";
+  applyTheme(saved);
+}
+
+function toggleTheme() {
+  const isLight = document.documentElement.classList.contains("light");
+  const next = isLight ? "dark" : "light";
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+}
 
 function readLikedMap() {
   try { return JSON.parse(localStorage.getItem(LIKED_KEY) || "{}"); } catch { return {}; }
@@ -91,6 +112,7 @@ const dom = {
   authForm: el("authForm"), authUsername: el("authUsername"),
   authPassword: el("authPassword"), authError: el("authError"),
   authSubmitBtn: el("authSubmitBtn"), tabLogin: el("tabLogin"), tabRegister: el("tabRegister"),
+  themeToggle: el("themeToggle"),
 };
 
 // ── Modal helpers ─────────────────────────────────────────────────────────────
@@ -524,6 +546,8 @@ async function importData(file) {
 // ── Wire events ───────────────────────────────────────────────────────────────
 
 function wireEvents() {
+  dom.themeToggle.addEventListener("click", toggleTheme);
+
   dom.newPinBtn.addEventListener("click", openUpload);
   dom.emptyUploadBtn.addEventListener("click", openUpload);
   dom.closeUploadBtn.addEventListener("click", () => closeModal(dom.uploadBackdrop));
@@ -600,6 +624,7 @@ function wireEvents() {
 }
 
 async function main() {
+  initTheme();
   updateAuthBtn();
   wireEvents();
   await refresh();
