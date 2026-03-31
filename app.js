@@ -77,6 +77,12 @@ async function deletePostRemote(id) {
 
 function el(id) { return document.getElementById(id); }
 
+function safeEl(id) {
+  const node = document.getElementById(id);
+  if (!node) console.warn("Missing element:", id);
+  return node;
+}
+
 const state = {
   posts: [], query: "", activeChip: "", room: "", style: "", sort: "newest",
   selectedId: null,
@@ -133,6 +139,7 @@ const dom = {
   closeProfileBtn: el("closeProfileBtn"), profileTitle: el("profileTitle"),
   profileJoined: el("profileJoined"), profileAvatar: el("profileAvatar"),
   profileStats: el("profileStats"), profileGrid: el("profileGrid"),
+  signOutBtn: el("signOutBtn"),
 };
 
 // ── Modal helpers ─────────────────────────────────────────────────────────────
@@ -175,9 +182,9 @@ function bytesToNice(n) {
 
 function updateAuthBtn() {
   const a = readAuth();
-  dom.authBtn.textContent = a ? `Sign out` : "Sign in";
-  dom.profileBtn.hidden = !a;
-  if (a) dom.profileBtn.textContent = `@${a.username}`;
+  if (dom.authBtn) dom.authBtn.hidden = !!a;
+  if (dom.profileBtn) { dom.profileBtn.hidden = !a; if (a) dom.profileBtn.textContent = `@${a.username}`; }
+  if (dom.signOutBtn) dom.signOutBtn.hidden = !a;
 }
 
 function setAuthMode(mode) {
@@ -199,14 +206,6 @@ function setAuthMode(mode) {
 }
 
 function openAuth() {
-  const a = readAuth();
-  if (a) {
-    if (confirm(`Sign out of @${a.username}?`)) {
-      writeAuth(null);
-      updateAuthBtn();
-    }
-    return;
-  }
   setAuthMode("login");
   dom.authUsername.value = "";
   dom.authPassword.value = "";
@@ -313,8 +312,8 @@ function cardTemplate(post) {
 }
 
 function renderStats(postsAll) {
-  dom.pinsCount.textContent = `${postsAll.length}`;
-  dom.likesCount.textContent = `${postsAll.reduce((s, p) => s + (p.likes || 0), 0)}`;
+  if (dom.pinsCount) dom.pinsCount.textContent = `${postsAll.length}`;
+  if (dom.likesCount) dom.likesCount.textContent = `${postsAll.reduce((s, p) => s + (p.likes || 0), 0)}`;
 }
 
 async function renderStorage() {
@@ -769,6 +768,7 @@ function initCustomSelect(wrapperId, triggerId, listId, valueId, onChange) {
 
 function wireEvents() {
   dom.profileBtn.addEventListener("click", () => { const a = readAuth(); if (a) openProfile(a.username); });
+  if (dom.signOutBtn) dom.signOutBtn.addEventListener("click", () => { if (confirm("Sign out?")) { writeAuth(null); updateAuthBtn(); } });
   dom.closeProfileBtn.addEventListener("click", () => closeModal(dom.profileBackdrop));
   dom.profileBackdrop.addEventListener("click", (e) => { if (e.target === dom.profileBackdrop) closeModal(dom.profileBackdrop); });
 

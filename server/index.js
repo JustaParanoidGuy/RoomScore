@@ -341,9 +341,13 @@ const PORT = Number(process.env.PORT) || 3000;
 
 async function start() {
   await ensureDirs();
-  console.log("Connecting to MongoDB...");
-  await mongoose.connect(MONGO_URI);
-  console.log("MongoDB connected");
+  try {
+    console.log("Connecting to MongoDB...");
+    await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 });
+    console.log("MongoDB connected");
+  } catch (e) {
+    console.warn("MongoDB unavailable (local dev):", e.message);
+  }
   app.listen(PORT, () => console.log("RoomScore serving at http://localhost:" + PORT));
 }
 
