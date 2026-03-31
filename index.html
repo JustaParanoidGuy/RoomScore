@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoomScore — Interior Pins</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div
+          class="logo"
+          id="brandLogo"
+          tabindex="0"
+          role="button"
+          aria-label="RoomScore logo, tap for animation"
+        >
+          <svg
+            class="logo-svg"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 100 100"
+            fill="none"
+            aria-hidden="true"
+          >
+            <g
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="9" y="9" width="82" height="82" />
+              <path
+                d="M 62 32 c 12 -2 16 8 9 14 c -7 6 -14 7 -14 11 s 4 12 14 12 c 6 0 11 -3 14 -7"
+              />
+              <path d="M 30 26 L 30 74" />
+              <path
+                d="M 30 26 L 46 26 Q 53 26 53 33 L 53 41 Q 53 48 44 48 L 30 48"
+              />
+              <path d="M 44 48 L 52 74" />
+            </g>
+          </svg>
+        </div>
+        <div class="brandText">
+          <div class="brandName">RoomScore</div>
+          <div class="brandTag">Interior design inspiration</div>
+        </div>
+      </div>
+
+      <div class="searchWrap">
+        <label class="srOnly" for="searchInput">Search</label>
+        <input
+          id="searchInput"
+          class="search"
+          placeholder="Search by title, style, room, tags…"
+          autocomplete="off"
+        />
+        <div class="chipRow" id="chipRow" aria-label="Quick filters"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btnGhost" id="exportBtn" type="button">Export</button>
+        <label class="btn btnGhost" for="importInput">Import</label>
+        <input id="importInput" type="file" accept="application/json" hidden />
+        <button class="btn btnGhost" id="authBtn" type="button">Sign in</button>
+        <button class="btn" id="newPinBtn" type="button">Upload</button>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="statsRow" aria-label="Stats">
+        <div class="stat">
+          <div class="statLabel">Pins</div>
+          <div class="statValue" id="pinsCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Likes</div>
+          <div class="statValue" id="likesCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">API</div>
+          <div class="statValue" id="storageInfo">—</div>
+        </div>
+      </section>
+
+      <section class="gridHeader">
+        <div class="gridTitle">
+          <h1>Discover interiors</h1>
+          <p class="muted">Upload room shots, save inspiration, and browse like a moodboard.</p>
+        </div>
+        <div class="gridTools">
+          <label class="selectLabel">
+            <span class="muted">Sort</span>
+            <select id="sortSelect" class="select">
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="mostLiked">Most liked</option>
+              <option value="titleAsc">Title A→Z</option>
+            </select>
+          </label>
+          <label class="selectLabel">
+            <span class="muted">Room</span>
+            <select id="roomFilter" class="select">
+              <option value="">All</option>
+              <option>Living Room</option>
+              <option>Bedroom</option>
+              <option>Kitchen</option>
+              <option>Bathroom</option>
+              <option>Home Office</option>
+              <option>Dining Room</option>
+              <option>Outdoor</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label class="selectLabel">
+            <span class="muted">Style</span>
+            <select id="styleFilter" class="select">
+              <option value="">All</option>
+              <option>Modern</option>
+              <option>Minimal</option>
+              <option>Scandinavian</option>
+              <option>Industrial</option>
+              <option>Boho</option>
+              <option>Traditional</option>
+              <option>Japandi</option>
+              <option>Rustic</option>
+              <option>Contemporary</option>
+              <option>Other</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="masonry" id="masonry" aria-live="polite"></section>
+      <section class="empty" id="emptyState" hidden>
+        <div class="emptyCard">
+          <div class="emptyTitle">No pins yet</div>
+          <div class="emptyText">
+            Upload your first interior design photo to get started.
+          </div>
+          <button class="btn" id="emptyUploadBtn" type="button">Upload a pin</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Upload Modal -->
+    <div class="modalBackdrop" id="uploadBackdrop" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+        <div class="modalHead">
+          <div>
+            <div class="modalTitle" id="uploadTitle">Upload a pin</div>
+            <div class="muted">Tip: use a portrait image for the best grid look.</div>
+          </div>
+          <button class="iconBtn" id="closeUploadBtn" type="button" aria-label="Close">
+            ✕
+          </button>
+        </div>
+
+        <form id="uploadForm" class="modalBody">
+          <div class="drop" id="dropZone">
+            <input id="imageInput" type="file" accept="image/*" hidden />
+            <div class="dropInner">
+              <div class="dropTitle">Drop an image here</div>
+              <div class="dropText">or <button class="linkBtn" id="browseBtn" type="button">browse</button></div>
+              <div class="dropHint">Max recommended: ~3–5MB (stored in your browser)</div>
+            </div>
+            <img id="previewImg" class="preview" alt="" hidden />
+          </div>
+
+          <div class="formGrid">
+            <label class="field">
+              <span>Title</span>
+              <input id="titleInput" required maxlength="60" placeholder="e.g., Warm minimal living room" />
+            </label>
+            <label class="field">
+              <span>Room</span>
+              <select id="roomInput" required>
+                <option value="" disabled selected>Select…</option>
+                <option>Living Room</option>
+                <option>Bedroom</option>
+                <option>Kitchen</option>
+                <option>Bathroom</option>
+                <option>Home Office</option>
+                <option>Dining Room</option>
+                <option>Outdoor</option>
+                <option>Other</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Style</span>
+              <select id="styleInput" required>
+                <option value="" disabled selected>Select…</option>
+                <option>Modern</option>
+                <option>Minimal</option>
+                <option>Scandinavian</option>
+                <option>Industrial</option>
+                <option>Boho</option>
+                <option>Traditional</option>
+                <option>Japandi</option>
+                <option>Rustic</option>
+                <option>Contemporary</option>
+                <option>Other</option>
+              </select>
+            </label>
+            <label class="field span2">
+              <span>Tags (comma-separated)</span>
+              <input id="tagsInput" maxlength="120" placeholder="e.g., neutral, wood, cozy, plants" />
+            </label>
+            <label class="field span2">
+              <span>Description</span>
+              <textarea id="descInput" maxlength="400" placeholder="What do you like about this space?"></textarea>
+            </label>
+          </div>
+
+          <div class="modalFoot">
+            <div class="muted" id="uploadStatus"></div>
+            <div class="row">
+              <button class="btn btnGhost" id="cancelUploadBtn" type="button">Cancel</button>
+              <button class="btn" id="savePinBtn" type="submit">Save pin</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Pin Detail Modal -->
+    <div class="modalBackdrop" id="detailBackdrop" hidden>
+      <div class="modal modalWide" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <div class="modalHead">
+          <div class="modalTitle" id="detailTitle">Pin</div>
+          <button class="iconBtn" id="closeDetailBtn" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="detailBody">
+          <div class="detailImgWrap">
+            <img id="detailImg" alt="" />
+          </div>
+          <div class="detailMeta">
+            <div class="detailTop">
+              <div class="detailH">
+                <div class="detailTitleText" id="detailTitleText"></div>
+                <div class="detailSub muted" id="detailSubText"></div>
+              </div>
+              <div class="detailBtns">
+                <button class="btn btnGhost" id="detailLikeBtn" type="button">Like</button>
+                <button class="btn btnDanger" id="detailDeleteBtn" type="button">Delete</button>
+              </div>
+            </div>
+            <div class="chips" id="detailChips"></div>
+            <p class="detailDesc" id="detailDesc"></p>
+            <div class="detailFooter muted" id="detailFooter"></div>
+
+            <!-- Comments -->
+            <div class="commentsSection">
+              <div class="commentsSectionTitle">Comments</div>
+              <div class="commentsList" id="commentsList"></div>
+              <form class="commentForm" id="commentForm">
+                <input id="commentInput" class="commentInput" placeholder="Add a comment… (sign in required)" maxlength="500" autocomplete="off" />
+                <button class="btn" type="submit" id="commentSubmitBtn">Post</button>
+              </form>
+              <div class="commentStatus muted" id="commentStatus"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="modalBackdrop" id="authBackdrop" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle" style="max-width:420px">
+        <div class="modalHead">
+          <div class="modalTitle" id="authTitle">Sign in</div>
+          <button class="iconBtn" id="closeAuthBtn" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="modalBody">
+          <div class="authTabs">
+            <button class="authTab authTab--active" id="tabLogin" type="button">Sign in</button>
+            <button class="authTab" id="tabRegister" type="button">Create account</button>
+          </div>
+          <form id="authForm" class="authFormInner">
+            <label class="field">
+              <span>Username</span>
+              <input id="authUsername" autocomplete="username" placeholder="your_username" maxlength="30" required />
+            </label>
+            <label class="field" style="margin-top:10px">
+              <span>Password</span>
+              <input id="authPassword" type="password" autocomplete="current-password" placeholder="••••••" required />
+            </label>
+            <div class="authError muted" id="authError"></div>
+            <div class="modalFoot" style="position:static;border-top:none;padding-top:14px">
+              <div></div>
+              <button class="btn" type="submit" id="authSubmitBtn">Sign in</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "roomscore",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Interior inspiration board with Express API and static frontend",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^1.4.5-lts.1",
+    "nanoid": "^3.3.7"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "users": [
+    {
+      "id": "4e5cb1918eb04e1583a25",
+      "username": "testuser",
+      "passwordHash": "$2b$10$pYmErvymeW7mx8kYeqIpm.cxgQI8oLWzXQi8kNafyGWaIFQNIerT.",
+      "createdAt": 1774973282779
+    },
+    {
+      "id": "4ad6dffe52c949f79c22b",
+      "username": "socrates",
+      "passwordHash": "$2b$10$YkiLfUQU7/rHm9ODHNxYuOI6GjGogv/p5wvYmPMtSjSSICYbuPLCG",
+      "createdAt": 1774973445280
+    }
+  ]
+}
