@@ -114,6 +114,12 @@ const dom = {
   authSubmitBtn: el("authSubmitBtn"), tabLogin: el("tabLogin"), tabRegister: el("tabRegister"),
   themeToggle: el("themeToggle"),
 
+  authBackdrop: el("authBackdrop"), closeAuthBtn: el("closeAuthBtn"),
+  authForm: el("authForm"), authUsername: el("authUsername"),
+  authPassword: el("authPassword"), authError: el("authError"),
+  authSubmitBtn: el("authSubmitBtn"), tabLogin: el("tabLogin"), tabRegister: el("tabRegister"),
+  themeToggle: el("themeToggle"),
+
   aiBtn: el("aiBtn"), aiBackdrop: el("aiBackdrop"), closeAiBtn: el("closeAiBtn"),
   aiForm: el("aiForm"), aiPrompt: el("aiPrompt"), aiRoom: el("aiRoom"),
   aiStyle: el("aiStyle"), aiTitle: el("aiTitle"),
@@ -122,6 +128,11 @@ const dom = {
   aiPreviewWrap: el("aiPreviewWrap"), aiPreviewImg: el("aiPreviewImg"),
   aiLoading: el("aiLoading"), aiLoadingText: el("aiLoadingText"),
   aiError: el("aiError"), aiStatus: el("aiStatus"),
+
+  profileBtn: el("profileBtn"), profileBackdrop: el("profileBackdrop"),
+  closeProfileBtn: el("closeProfileBtn"), profileTitle: el("profileTitle"),
+  profileJoined: el("profileJoined"), profileAvatar: el("profileAvatar"),
+  profileStats: el("profileStats"), profileGrid: el("profileGrid"),
 };
 
 // ── Modal helpers ─────────────────────────────────────────────────────────────
@@ -164,7 +175,9 @@ function bytesToNice(n) {
 
 function updateAuthBtn() {
   const a = readAuth();
-  dom.authBtn.textContent = a ? `@${a.username}` : "Sign in";
+  dom.authBtn.textContent = a ? `Sign out` : "Sign in";
+  dom.profileBtn.hidden = !a;
+  if (a) dom.profileBtn.textContent = `@${a.username}`;
 }
 
 function setAuthMode(mode) {
@@ -188,7 +201,7 @@ function setAuthMode(mode) {
 function openAuth() {
   const a = readAuth();
   if (a) {
-    if (confirm(`Signed in as @${a.username}. Sign out?`)) {
+    if (confirm(`Sign out of @${a.username}?`)) {
       writeAuth(null);
       updateAuthBtn();
     }
@@ -287,7 +300,13 @@ function cardTemplate(post) {
   titleRow.appendChild(title); titleRow.appendChild(likeBtn);
 
   const mini = document.createElement("div"); mini.className = "mini";
-  mini.innerHTML = `<span>${post.style}</span><span>${fmtDate(post.createdAt)}</span>`;
+  const authorEl = post.author ? `<button class="cardAuthor" data-username="${post.author}" type="button">@${post.author}</button>` : "";
+  const aiBadge = post.aiGenerated ? `<span class="cardAiBadge">✦ AI</span>` : "";
+  mini.innerHTML = `<span class="miniLeft">${authorEl}${aiBadge}</span><span>${fmtDate(post.createdAt)}</span>`;
+  mini.querySelector(".cardAuthor")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openProfile(post.author);
+  });
   meta.appendChild(titleRow); meta.appendChild(mini);
   card.appendChild(thumbWrap); card.appendChild(meta);
   return card;
@@ -522,9 +541,75 @@ async function deleteSelected() {
   closeDetail(); await refresh();
 }
 
+// ── Profile ───────────────────────────────────────────────────────────────────
+
+async function openProfile(username) {
+  dom.profileTitle.textContent = `@${username}`;
+  dom.profileJoined.textContent = "Loading…";
+  dom.profileAvatar.textContent = username[0].toUpperCase();
+  dom.profileStats.innerHTML = "";
+  dom.profileGrid.innerHTML = '<div class="muted" style="font-size:13px;padding:8px 0">Loading posts…</div>';
+  openModal(dom.profileBackdrop);
+  try {
+    const res = await fetch(apiUrl(`/api/profile/${username}`));
+    if (!res.ok) { dom.profileJoined.textContent = "Could not load profile."; return; }
+    const data = await res.json();
+    dom.profileJoined.textContent = `Joined ${fmtDate(data.joinedAt)}`;
+    dom.profileStats.innerHTML = `
+      <div class="profileStat"><div class="profileStatVal">${data.postCount}</div><div class="profileStatLabel">Pins</div></div>
+      <div class="profileStat"><div class="profileStatVal">${data.totalLikes}</div><div class="profileStatLabel">Likes</div></div>
+    `;
+    dom.profileGrid.innerHTML = "";
+    if (data.posts.length === 0) {
+      dom.profileGrid.innerHTML = '<div class="muted" style="font-size:13px;padding:8px 0">No pins yet.</div>';
+      return;
+    }
+    const likedMap = readLikedMap();
+    for (const p of data.posts) {
+      const thumb = document.createElement("div");
+      thumb.className = "profileThumb";
+      thumb.innerHTML = `<img src="${imageSrc(p)}" alt="${p.title}" loading="lazy" /><div class="profileThumbOverlay"><div class="profileThumbTitle">${p.title}</div></div>`;
+      thumb.addEventListener("click", () => {
+        closeModal(dom.profileBackdrop);
+        // merge into state if not present
+        if (!state.posts.find((x) => x.id === p.id)) {
+          state.posts.unshift({ ...p, liked: !!likedMap[p.id], tags: p.tags || [] });
+        }
+        openDetail(p.id);
+      });
+      dom.profileGrid.appendChild(thumb);
+    }
+  } catch (e) {
+    dom.profileJoined.textContent = "Error loading profile.";
+    console.error(e);
+  }
+}
+
 // ── AI Generate ───────────────────────────────────────────────────────────────
 
 let aiGeneratedPost = null;
+let aiLoadingInterval = null;
+
+const AI_MESSAGES = [
+  "Generating your interior…",
+  "Composing the space…",
+  "Adding lighting details…",
+  "Refining textures…",
+  "Almost there…",
+];
+
+function startAiLoadingMessages() {
+  let i = 0;
+  dom.aiLoadingText.textContent = AI_MESSAGES[0];
+  aiLoadingInterval = setInterval(() => {
+    i = (i + 1) % AI_MESSAGES.length;
+    dom.aiLoadingText.textContent = AI_MESSAGES[i];
+  }, 5000);
+}
+
+function stopAiLoadingMessages() {
+  if (aiLoadingInterval) { clearInterval(aiLoadingInterval); aiLoadingInterval = null; }
+}
 
 function resetAiModal() {
   aiGeneratedPost = null;
@@ -558,7 +643,10 @@ async function runGenerate() {
   dom.aiGenerateBtn.hidden = true;
   dom.aiSaveBtn.hidden = true;
   dom.aiRegenerateBtn.hidden = true;
-  dom.aiLoadingText.textContent = "Generating your interior…";
+  startAiLoadingMessages();
+  // Reset progress bar animation
+  const bar = el("aiLoadingBarFill");
+  if (bar) { bar.style.animation = "none"; void bar.offsetWidth; bar.style.animation = ""; }
 
   try {
     const res = await fetch(apiUrl("/api/ai/generate"), {
@@ -590,6 +678,7 @@ async function runGenerate() {
     dom.aiGenerateBtn.disabled = false;
   } finally {
     dom.aiLoading.hidden = true;
+    stopAiLoadingMessages();
   }
 }
 
@@ -631,9 +720,58 @@ async function importData(file) {
   writeLikedMap({}); await refresh();
 }
 
+// ── Custom animated selects ───────────────────────────────────────────────────
+
+function initCustomSelect(wrapperId, triggerId, listId, valueId, onChange) {
+  const wrap = el(wrapperId);
+  const trigger = el(triggerId);
+  const list = el(listId);
+  const valueEl = el(valueId);
+  if (!wrap || !trigger || !list) return;
+
+  function open() {
+    trigger.setAttribute("aria-expanded", "true");
+    list.classList.add("cs--open");
+  }
+  function close() {
+    trigger.setAttribute("aria-expanded", "false");
+    list.classList.remove("cs--open");
+  }
+  function toggle() {
+    trigger.getAttribute("aria-expanded") === "true" ? close() : open();
+  }
+
+  trigger.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
+
+  list.querySelectorAll(".csOption").forEach((opt) => {
+    opt.addEventListener("click", () => {
+      list.querySelectorAll(".csOption").forEach((o) => o.classList.remove("csOption--active"));
+      opt.classList.add("csOption--active");
+      if (valueEl) valueEl.textContent = opt.textContent;
+      onChange(opt.dataset.value || "");
+      close();
+    });
+  });
+
+  // Close on outside click
+  document.addEventListener("click", (e) => {
+    if (!wrap.contains(e.target)) close();
+  });
+
+  // Keyboard: Escape closes
+  trigger.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+  });
+}
+
 // ── Wire events ───────────────────────────────────────────────────────────────
 
 function wireEvents() {
+  dom.profileBtn.addEventListener("click", () => { const a = readAuth(); if (a) openProfile(a.username); });
+  dom.closeProfileBtn.addEventListener("click", () => closeModal(dom.profileBackdrop));
+  dom.profileBackdrop.addEventListener("click", (e) => { if (e.target === dom.profileBackdrop) closeModal(dom.profileBackdrop); });
+
   dom.themeToggle.addEventListener("click", toggleTheme);
 
   dom.aiBtn.addEventListener("click", openAiModal);
@@ -664,9 +802,10 @@ function wireEvents() {
   dom.tabRegister.addEventListener("click", () => setAuthMode("register"));
 
   dom.searchInput.addEventListener("input", (e) => { state.query = e.target.value || ""; render(); });
-  dom.sortSelect.addEventListener("change", (e) => { state.sort = e.target.value; render(); });
-  dom.roomFilter.addEventListener("change", (e) => { state.room = e.target.value || ""; render(); });
-  dom.styleFilter.addEventListener("change", (e) => { state.style = e.target.value || ""; render(); });
+
+  initCustomSelect("csSortWrap", "csSortTrigger", "csSortList", "csSortValue", (v) => { state.sort = v || "newest"; render(); });
+  initCustomSelect("csRoomWrap", "csRoomTrigger", "csRoomList", "csRoomValue", (v) => { state.room = v; render(); });
+  initCustomSelect("csStyleWrap", "csStyleTrigger", "csStyleList", "csStyleValue", (v) => { state.style = v; render(); });
 
   dom.exportBtn.addEventListener("click", exportData);
   dom.importInput.addEventListener("change", async (e) => {
@@ -704,6 +843,7 @@ function wireEvents() {
     else if (!dom.uploadBackdrop.hidden) closeModal(dom.uploadBackdrop);
     else if (!dom.authBackdrop.hidden) closeModal(dom.authBackdrop);
     else if (!dom.aiBackdrop.hidden) closeModal(dom.aiBackdrop);
+    else if (!dom.profileBackdrop.hidden) closeModal(dom.profileBackdrop);
   });
 
   const brandLogo = document.getElementById("brandLogo");
@@ -724,7 +864,13 @@ async function main() {
   initTheme();
   updateAuthBtn();
   wireEvents();
-  await refresh();
+
+  // Dismiss loader after 2s (or when data is ready, whichever is later)
+  const loaderEl = document.getElementById("pageLoader");
+  const minWait = new Promise((r) => setTimeout(r, 2000));
+  const dataReady = refresh();
+  await Promise.all([minWait, dataReady]);
+  if (loaderEl) loaderEl.classList.add("pl--done");
 }
 
 main().catch((err) => {

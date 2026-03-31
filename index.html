@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RoomScore — Interior Pins</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
     <script>
       // Apply saved theme before paint to avoid flash
@@ -13,6 +16,25 @@
     </script>
   </head>
   <body>
+    <!-- Loading screen -->
+    <div class="pageLoader" id="pageLoader" aria-hidden="true">
+      <div class="pageLoaderInner">
+        <div class="pageLoaderLogo">
+          <svg class="pageLoaderSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+            <g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <rect class="plRect" x="9" y="9" width="82" height="82" stroke-width="1.2"/>
+              <path class="plS" d="M 62 32 c 12 -2 16 8 9 14 c -7 6 -14 7 -14 11 s 4 12 14 12 c 6 0 11 -3 14 -7" stroke-width="1.2"/>
+              <path class="plP1" d="M 30 26 L 30 74" stroke-width="1.2"/>
+              <path class="plP2" d="M 30 26 L 46 26 Q 53 26 53 33 L 53 41 Q 53 48 44 48 L 30 48" stroke-width="1.2"/>
+              <path class="plP3" d="M 44 48 L 52 74" stroke-width="1.2"/>
+            </g>
+          </svg>
+        </div>
+        <div class="pageLoaderName">RoomScore</div>
+        <div class="pageLoaderBar"><div class="pageLoaderBarFill"></div></div>
+      </div>
+    </div>
+
     <header class="topbar">
       <div class="brand">
         <div
@@ -69,6 +91,7 @@
         <label class="btn btnGhost" for="importInput">Import</label>
         <input id="importInput" type="file" accept="application/json" hidden />
         <button class="btn btnGhost" id="authBtn" type="button">Sign in</button>
+        <button class="btn btnGhost profileBtn" id="profileBtn" type="button" hidden>Profile</button>
         <button class="themeToggle" id="themeToggle" type="button" aria-label="Toggle light/dark mode">
           <span class="themeToggle__track">
             <span class="themeToggle__thumb"></span>
@@ -82,17 +105,9 @@
 
     <main class="shell">
       <section class="statsRow" aria-label="Stats">
-        <div class="stat">
-          <div class="statLabel">Pins</div>
-          <div class="statValue" id="pinsCount">0</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Likes</div>
-          <div class="statValue" id="likesCount">0</div>
-        </div>
-        <div class="stat">
+        <div class="stat statCompact">
           <div class="statLabel">API</div>
-          <div class="statValue" id="storageInfo">—</div>
+          <div class="statValue statValueSmall" id="storageInfo">—</div>
         </div>
       </section>
 
@@ -102,45 +117,60 @@
           <p class="muted">Upload room shots, save inspiration, and browse like a moodboard.</p>
         </div>
         <div class="gridTools">
-          <label class="selectLabel">
-            <span class="muted">Sort</span>
-            <select id="sortSelect" class="select">
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-              <option value="mostLiked">Most liked</option>
-              <option value="titleAsc">Title A→Z</option>
-            </select>
-          </label>
-          <label class="selectLabel">
-            <span class="muted">Room</span>
-            <select id="roomFilter" class="select">
-              <option value="">All</option>
-              <option>Living Room</option>
-              <option>Bedroom</option>
-              <option>Kitchen</option>
-              <option>Bathroom</option>
-              <option>Home Office</option>
-              <option>Dining Room</option>
-              <option>Outdoor</option>
-              <option>Other</option>
-            </select>
-          </label>
-          <label class="selectLabel">
-            <span class="muted">Style</span>
-            <select id="styleFilter" class="select">
-              <option value="">All</option>
-              <option>Modern</option>
-              <option>Minimal</option>
-              <option>Scandinavian</option>
-              <option>Industrial</option>
-              <option>Boho</option>
-              <option>Traditional</option>
-              <option>Japandi</option>
-              <option>Rustic</option>
-              <option>Contemporary</option>
-              <option>Other</option>
-            </select>
-          </label>
+          <!-- Custom animated dropdowns -->
+          <div class="customSelect" id="csSortWrap">
+            <button class="customSelectTrigger" type="button" id="csSortTrigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="csLabel muted">Sort</span>
+              <span class="csValue" id="csSortValue">Newest</span>
+              <svg class="csChevron" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <ul class="csDropdown" role="listbox" id="csSortList" aria-label="Sort">
+              <li class="csOption csOption--active" role="option" data-value="newest">Newest</li>
+              <li class="csOption" role="option" data-value="oldest">Oldest</li>
+              <li class="csOption" role="option" data-value="mostLiked">Most liked</li>
+              <li class="csOption" role="option" data-value="titleAsc">Title A→Z</li>
+            </ul>
+          </div>
+
+          <div class="customSelect" id="csRoomWrap">
+            <button class="customSelectTrigger" type="button" id="csRoomTrigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="csLabel muted">Room</span>
+              <span class="csValue" id="csRoomValue">All</span>
+              <svg class="csChevron" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <ul class="csDropdown" role="listbox" id="csRoomList" aria-label="Room">
+              <li class="csOption csOption--active" role="option" data-value="">All</li>
+              <li class="csOption" role="option" data-value="Living Room">Living Room</li>
+              <li class="csOption" role="option" data-value="Bedroom">Bedroom</li>
+              <li class="csOption" role="option" data-value="Kitchen">Kitchen</li>
+              <li class="csOption" role="option" data-value="Bathroom">Bathroom</li>
+              <li class="csOption" role="option" data-value="Home Office">Home Office</li>
+              <li class="csOption" role="option" data-value="Dining Room">Dining Room</li>
+              <li class="csOption" role="option" data-value="Outdoor">Outdoor</li>
+              <li class="csOption" role="option" data-value="Other">Other</li>
+            </ul>
+          </div>
+
+          <div class="customSelect" id="csStyleWrap">
+            <button class="customSelectTrigger" type="button" id="csStyleTrigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="csLabel muted">Style</span>
+              <span class="csValue" id="csStyleValue">All</span>
+              <svg class="csChevron" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <ul class="csDropdown" role="listbox" id="csStyleList" aria-label="Style">
+              <li class="csOption csOption--active" role="option" data-value="">All</li>
+              <li class="csOption" role="option" data-value="Modern">Modern</li>
+              <li class="csOption" role="option" data-value="Minimal">Minimal</li>
+              <li class="csOption" role="option" data-value="Scandinavian">Scandinavian</li>
+              <li class="csOption" role="option" data-value="Industrial">Industrial</li>
+              <li class="csOption" role="option" data-value="Boho">Boho</li>
+              <li class="csOption" role="option" data-value="Traditional">Traditional</li>
+              <li class="csOption" role="option" data-value="Japandi">Japandi</li>
+              <li class="csOption" role="option" data-value="Rustic">Rustic</li>
+              <li class="csOption" role="option" data-value="Contemporary">Contemporary</li>
+              <li class="csOption" role="option" data-value="Other">Other</li>
+            </ul>
+          </div>
         </div>
       </section>
 
@@ -155,6 +185,45 @@
         </div>
       </section>
     </main>
+
+    <footer class="siteFooter">
+      <div class="footerInner">
+        <div class="footerBrand">
+          <span class="footerName">RoomScore</span>
+          <span class="footerTag">Interior design inspiration</span>
+        </div>
+        <div class="footerConnect">
+          <span class="footerConnectLabel">Connect</span>
+          <div class="footerIcons">
+            <a href="#" class="footerIcon" aria-label="Instagram" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                <circle cx="12" cy="12" r="4"/>
+                <circle cx="17.5" cy="6.5" r=".8" fill="currentColor" stroke="none"/>
+              </svg>
+            </a>
+            <a href="#" class="footerIcon" aria-label="Facebook" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+              </svg>
+            </a>
+            <a href="#" class="footerIcon" aria-label="LinkedIn" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+                <rect x="2" y="9" width="4" height="12"/>
+                <circle cx="4" cy="4" r="2"/>
+              </svg>
+            </a>
+            <a href="#" class="footerIcon" aria-label="GitHub" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+        <div class="footerCopy">© 2026 RoomScore</div>
+      </div>
+    </footer>
 
     <!-- Upload Modal -->
     <div class="modalBackdrop" id="uploadBackdrop" hidden>
@@ -359,6 +428,7 @@
               <div class="aiSpinner"></div>
               <div class="aiLoadingText" id="aiLoadingText">Generating your interior…</div>
               <div class="muted" style="font-size:12px;margin-top:4px">This can take 20–40 seconds</div>
+              <div class="aiLoadingBar"><div class="aiLoadingBarFill" id="aiLoadingBarFill"></div></div>
             </div>
 
             <div class="aiError" id="aiError"></div>
@@ -373,6 +443,26 @@
               </div>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modalBackdrop" id="profileBackdrop" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle" style="max-width:680px">
+        <div class="modalHead">
+          <div class="profileHeadInner">
+            <div class="profileAvatar" id="profileAvatar"></div>
+            <div>
+              <div class="modalTitle" id="profileTitle">@username</div>
+              <div class="muted" id="profileJoined" style="font-size:13px"></div>
+            </div>
+          </div>
+          <button class="iconBtn" id="closeProfileBtn" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="modalBody">
+          <div class="profileStats" id="profileStats"></div>
+          <div class="profileGrid" id="profileGrid"></div>
         </div>
       </div>
     </div>

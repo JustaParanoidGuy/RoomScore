@@ -11,6 +11,12 @@
       "username": "socrates",
       "passwordHash": "$2b$10$YkiLfUQU7/rHm9ODHNxYuOI6GjGogv/p5wvYmPMtSjSSICYbuPLCG",
       "createdAt": 1774973445280
+    },
+    {
+      "id": "565bf3f135174db8ab226",
+      "username": "asvishal007",
+      "passwordHash": "$2b$10$My4zsx3SBGgjO0Nodkqzeu.JOhvwnVBK31C.t5nC8iKzVSmzeqel2",
+      "createdAt": 1774982311010
     }
   ]
 }
