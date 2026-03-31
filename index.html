@@ -75,6 +75,7 @@
           </span>
           <span class="themeToggle__icon" id="themeIcon">🌙</span>
         </button>
+        <button class="btn btnAI" id="aiBtn" type="button">✦ Generate</button>
         <button class="btn" id="newPinBtn" type="button">Upload</button>
       </div>
     </header>
@@ -301,6 +302,75 @@
             <div class="modalFoot" style="position:static;border-top:none;padding-top:14px">
               <div></div>
               <button class="btn" type="submit" id="authSubmitBtn">Sign in</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Generate Modal -->
+    <div class="modalBackdrop" id="aiBackdrop" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aiModalTitle" style="max-width:500px">
+        <div class="modalHead">
+          <div>
+            <div class="modalTitle" id="aiModalTitle">✦ AI Generate</div>
+            <div class="muted">Describe your dream interior and let AI create it.</div>
+          </div>
+          <button class="iconBtn" id="closeAiBtn" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="modalBody">
+          <form id="aiForm">
+            <label class="field">
+              <span>Prompt</span>
+              <textarea id="aiPrompt" maxlength="400" rows="3"
+                placeholder="e.g. warm cozy reading nook with bookshelves, soft lamp light, wooden floors…"></textarea>
+            </label>
+            <div class="formGrid" style="margin-top:12px">
+              <label class="field">
+                <span>Room</span>
+                <select id="aiRoom">
+                  <option>Living Room</option><option>Bedroom</option><option>Kitchen</option>
+                  <option>Bathroom</option><option>Home Office</option><option>Dining Room</option>
+                  <option>Outdoor</option><option>Other</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Style</span>
+                <select id="aiStyle">
+                  <option>Modern</option><option>Minimal</option><option>Scandinavian</option>
+                  <option>Industrial</option><option>Boho</option><option>Traditional</option>
+                  <option>Japandi</option><option>Rustic</option><option>Contemporary</option>
+                </select>
+              </label>
+              <label class="field span2">
+                <span>Pin title (optional)</span>
+                <input id="aiTitle" maxlength="60" placeholder="Leave blank to auto-generate" />
+              </label>
+            </div>
+
+            <!-- Preview area -->
+            <div class="aiPreviewWrap" id="aiPreviewWrap" hidden>
+              <img id="aiPreviewImg" class="aiPreviewImg" alt="Generated interior" />
+              <div class="aiPreviewBadge">AI Generated</div>
+            </div>
+
+            <!-- Loading state -->
+            <div class="aiLoading" id="aiLoading" hidden>
+              <div class="aiSpinner"></div>
+              <div class="aiLoadingText" id="aiLoadingText">Generating your interior…</div>
+              <div class="muted" style="font-size:12px;margin-top:4px">This can take 20–40 seconds</div>
+            </div>
+
+            <div class="aiError" id="aiError"></div>
+
+            <div class="modalFoot" style="position:static;border-top:none;padding-top:14px">
+              <div class="muted" id="aiStatus"></div>
+              <div class="row">
+                <button class="btn btnGhost" id="aiRegenerateBtn" type="button" hidden>Regenerate</button>
+                <button class="btn btnGhost" id="cancelAiBtn" type="button">Cancel</button>
+                <button class="btn btnAI" id="aiGenerateBtn" type="submit">✦ Generate</button>
+                <button class="btn" id="aiSaveBtn" type="button" hidden>Save as pin</button>
+              </div>
             </div>
           </form>
         </div>

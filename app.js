@@ -113,6 +113,15 @@ const dom = {
   authPassword: el("authPassword"), authError: el("authError"),
   authSubmitBtn: el("authSubmitBtn"), tabLogin: el("tabLogin"), tabRegister: el("tabRegister"),
   themeToggle: el("themeToggle"),
+
+  aiBtn: el("aiBtn"), aiBackdrop: el("aiBackdrop"), closeAiBtn: el("closeAiBtn"),
+  aiForm: el("aiForm"), aiPrompt: el("aiPrompt"), aiRoom: el("aiRoom"),
+  aiStyle: el("aiStyle"), aiTitle: el("aiTitle"),
+  aiGenerateBtn: el("aiGenerateBtn"), aiSaveBtn: el("aiSaveBtn"),
+  aiRegenerateBtn: el("aiRegenerateBtn"), cancelAiBtn: el("cancelAiBtn"),
+  aiPreviewWrap: el("aiPreviewWrap"), aiPreviewImg: el("aiPreviewImg"),
+  aiLoading: el("aiLoading"), aiLoadingText: el("aiLoadingText"),
+  aiError: el("aiError"), aiStatus: el("aiStatus"),
 };
 
 // ── Modal helpers ─────────────────────────────────────────────────────────────
@@ -513,6 +522,85 @@ async function deleteSelected() {
   closeDetail(); await refresh();
 }
 
+// ── AI Generate ───────────────────────────────────────────────────────────────
+
+let aiGeneratedPost = null;
+
+function resetAiModal() {
+  aiGeneratedPost = null;
+  dom.aiPrompt.value = "";
+  dom.aiTitle.value = "";
+  dom.aiError.textContent = "";
+  dom.aiStatus.textContent = "";
+  dom.aiPreviewWrap.hidden = true;
+  dom.aiLoading.hidden = true;
+  dom.aiSaveBtn.hidden = true;
+  dom.aiRegenerateBtn.hidden = true;
+  dom.aiGenerateBtn.hidden = false;
+  dom.aiGenerateBtn.disabled = false;
+}
+
+function openAiModal() {
+  const a = readAuth();
+  if (!a) { openAuth(); return; }
+  resetAiModal();
+  openModal(dom.aiBackdrop);
+}
+
+async function runGenerate() {
+  const prompt = dom.aiPrompt.value.trim();
+  if (!prompt) { dom.aiError.textContent = "Please enter a prompt."; return; }
+
+  dom.aiError.textContent = "";
+  dom.aiPreviewWrap.hidden = true;
+  dom.aiLoading.hidden = false;
+  dom.aiGenerateBtn.disabled = true;
+  dom.aiGenerateBtn.hidden = true;
+  dom.aiSaveBtn.hidden = true;
+  dom.aiRegenerateBtn.hidden = true;
+  dom.aiLoadingText.textContent = "Generating your interior…";
+
+  try {
+    const res = await fetch(apiUrl("/api/ai/generate"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({
+        prompt,
+        room: dom.aiRoom.value,
+        style: dom.aiStyle.value,
+        title: dom.aiTitle.value.trim(),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      dom.aiError.textContent = data.error || "Generation failed. Try again.";
+      dom.aiGenerateBtn.hidden = false;
+      dom.aiGenerateBtn.disabled = false;
+      return;
+    }
+    aiGeneratedPost = data.post;
+    dom.aiPreviewImg.src = data.post.imageUrl;
+    dom.aiPreviewWrap.hidden = false;
+    dom.aiSaveBtn.hidden = false;
+    dom.aiRegenerateBtn.hidden = false;
+    dom.aiStatus.textContent = "Looking good? Save it as a pin or regenerate.";
+  } catch (e) {
+    dom.aiError.textContent = "Network error. Is the server running?";
+    dom.aiGenerateBtn.hidden = false;
+    dom.aiGenerateBtn.disabled = false;
+  } finally {
+    dom.aiLoading.hidden = true;
+  }
+}
+
+async function saveAiPin() {
+  if (!aiGeneratedPost) return;
+  dom.aiSaveBtn.disabled = true;
+  dom.aiStatus.textContent = "Saved!";
+  await refresh();
+  setTimeout(() => closeModal(dom.aiBackdrop), 600);
+}
+
 // ── Export / Import ───────────────────────────────────────────────────────────
 
 function downloadJson(filename, obj) {
@@ -547,6 +635,14 @@ async function importData(file) {
 
 function wireEvents() {
   dom.themeToggle.addEventListener("click", toggleTheme);
+
+  dom.aiBtn.addEventListener("click", openAiModal);
+  dom.closeAiBtn.addEventListener("click", () => closeModal(dom.aiBackdrop));
+  dom.cancelAiBtn.addEventListener("click", () => closeModal(dom.aiBackdrop));
+  dom.aiBackdrop.addEventListener("click", (e) => { if (e.target === dom.aiBackdrop) closeModal(dom.aiBackdrop); });
+  dom.aiForm.addEventListener("submit", (e) => { e.preventDefault(); runGenerate(); });
+  dom.aiRegenerateBtn.addEventListener("click", () => runGenerate());
+  dom.aiSaveBtn.addEventListener("click", saveAiPin);
 
   dom.newPinBtn.addEventListener("click", openUpload);
   dom.emptyUploadBtn.addEventListener("click", openUpload);
@@ -607,6 +703,7 @@ function wireEvents() {
     if (!dom.detailBackdrop.hidden) closeDetail();
     else if (!dom.uploadBackdrop.hidden) closeModal(dom.uploadBackdrop);
     else if (!dom.authBackdrop.hidden) closeModal(dom.authBackdrop);
+    else if (!dom.aiBackdrop.hidden) closeModal(dom.aiBackdrop);
   });
 
   const brandLogo = document.getElementById("brandLogo");
