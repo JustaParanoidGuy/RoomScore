@@ -13,7 +13,7 @@ const cors = require("cors");
 const ROOT = path.join(__dirname, "..");
 const UPLOADS = path.join(ROOT, "uploads");
 const JWT_SECRET = process.env.JWT_SECRET || "roomscore-dev-secret-change-in-prod";
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://Vishal:vishal%23VK47@cluster0.55wth1q.mongodb.net/roomscore";
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://Vishal:vishalVK47@cluster0.55wth1q.mongodb.net/roomscore";
 
 // ── Mongoose schemas ──────────────────────────────────────────────────────────
 

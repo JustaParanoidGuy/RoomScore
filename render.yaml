@@ -10,4 +10,4 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: MONGO_URI
-        value: mongodb+srv://Vishal:vishal%23VK47@cluster0.55wth1q.mongodb.net/roomscore
+        value: mongodb+srv://Vishal:vishalVK47@cluster0.55wth1q.mongodb.net/roomscore
