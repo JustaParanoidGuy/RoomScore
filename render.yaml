@@ -11,3 +11,9 @@ services:
         generateValue: true
       - key: MONGO_URI
         value: mongodb+srv://Vishal:vishalVK47@cluster0.55wth1q.mongodb.net/roomscore
+      - key: CLOUDINARY_CLOUD_NAME
+        value: dight3z4y
+      - key: CLOUDINARY_API_KEY
+        value: "245229126266991"
+      - key: CLOUDINARY_API_SECRET
+        value: OJsYrw1XM93w3KfPHxQM_h9vGAA

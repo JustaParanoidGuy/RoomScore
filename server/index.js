@@ -1,12 +1,14 @@
 console.log("Starting server...");
 const express = require("express");
 const multer = require("multer");
+const multerMemory = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 }, fileFilter: (_req, file, cb) => { if (!file.mimetype.startsWith("image/")) return cb(new Error("Only image uploads are allowed.")); cb(null, true); } });
 const path = require("path");
 const fs2 = require("fs/promises");
 const { randomUUID } = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
+const cloudinary = require("cloudinary").v2;
 const nanoid = () => randomUUID().replace(/-/g, "").slice(0, 21);
 const cors = require("cors");
 
@@ -15,13 +17,36 @@ const UPLOADS = path.join(ROOT, "uploads");
 const JWT_SECRET = process.env.JWT_SECRET || "roomscore-dev-secret-change-in-prod";
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://Vishal:vishalVK47@cluster0.55wth1q.mongodb.net/roomscore";
 
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dight3z4y",
+  api_key: process.env.CLOUDINARY_API_KEY || "245229126266991",
+  api_secret: process.env.CLOUDINARY_API_SECRET || "OJsYrw1XM93w3KfPHxQM_h9vGAA",
+});
+
+async function uploadToCloudinary(bufferOrPath, filename) {
+  return new Promise((resolve, reject) => {
+    const opts = { folder: "roomscore", public_id: filename.replace(/\.[^.]+$/, ""), resource_type: "image" };
+    if (Buffer.isBuffer(bufferOrPath)) {
+      const stream = cloudinary.uploader.upload_stream(opts, (err, result) => {
+        if (err) reject(err); else resolve(result.secure_url);
+      });
+      const { Readable } = require("stream");
+      Readable.from(bufferOrPath).pipe(stream);
+    } else {
+      cloudinary.uploader.upload(bufferOrPath, opts, (err, result) => {
+        if (err) reject(err); else resolve(result.secure_url);
+      });
+    }
+  });
+}
+
 // ── Mongoose schemas ──────────────────────────────────────────────────────────
 
 const postSchema = new mongoose.Schema({
   _id: { type: String, default: () => nanoid() },
   title: String, room: String, style: String,
   description: String, tags: [String],
-  imageFile: String, imageUrl: String,
+  imageUrl: String,
   w: Number, h: Number,
   createdAt: { type: Number, default: Date.now },
   likes: { type: Number, default: 0 },
@@ -46,17 +71,13 @@ const userSchema = new mongoose.Schema({
 const Post = mongoose.model("Post", postSchema);
 const User = mongoose.model("User", userSchema);
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function buildSearchBlob(p) {
-  return [p.title, p.room, p.style, (p.tags || []).join(" "), p.description]
-    .filter(Boolean).join(" . ").toLowerCase();
+  return [p.title, p.room, p.style, (p.tags || []).join(" "), p.description].filter(Boolean).join(" . ").toLowerCase();
 }
 
 function withImageUrl(p) {
   const obj = p.toObject ? p.toObject() : { ...p };
   obj.id = obj._id;
-  if (!obj.imageUrl && obj.imageFile) obj.imageUrl = "/uploads/" + obj.imageFile;
   return obj;
 }
 
@@ -71,21 +92,6 @@ function authMiddleware(req, res, next) {
 async function ensureDirs() {
   await fs2.mkdir(UPLOADS, { recursive: true });
 }
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOADS),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname || "") || ".jpg";
-    cb(null, nanoid() + ext);
-  },
-});
-const upload = multer({
-  storage, limits: { fileSize: 12 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (!file.mimetype.startsWith("image/")) return cb(new Error("Only image uploads are allowed."));
-    cb(null, true);
-  },
-});
 
 const app = express();
 app.use(cors());
@@ -134,46 +140,29 @@ app.get("/api/posts", async (_req, res) => {
 app.get("/api/export", async (_req, res) => {
   try {
     const posts = await Post.find();
-    const out = [];
-    for (const p of posts) {
-      const obj = withImageUrl(p);
-      if (p.imageFile) {
-        try {
-          const buf = await fs2.readFile(path.join(UPLOADS, p.imageFile));
-          const ext = path.extname(p.imageFile).replace(".", "") || "jpeg";
-          const mime = ext === "jpg" ? "jpeg" : ext;
-          obj.imageDataUrl = "data:image/" + mime + ";base64," + buf.toString("base64");
-        } catch {}
-      }
-      out.push(obj);
-    }
-    res.json({ version: 1, exportedAt: Date.now(), posts: out });
+    res.json({ version: 1, exportedAt: Date.now(), posts: posts.map(withImageUrl) });
   } catch (e) { console.error(e); res.status(500).json({ error: "Export failed." }); }
 });
 
-app.post("/api/posts", authMiddleware, upload.single("image"), async (req, res) => {
+app.post("/api/posts", authMiddleware, multerMemory.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "Image file is required." });
     let tags = []; try { tags = JSON.parse(req.body.tags || "[]"); } catch { tags = []; }
-    const id = nanoid();
+    const filename = nanoid();
+    const imageUrl = await uploadToCloudinary(req.file.buffer, filename);
     const post = await Post.create({
-      _id: id,
+      _id: nanoid(),
       title: String(req.body.title || "Untitled").slice(0, 60),
       room: String(req.body.room || "Other"),
       style: String(req.body.style || "Other"),
       description: String(req.body.description || "").slice(0, 400),
-      tags, imageFile: req.file.filename,
-      imageUrl: "/uploads/" + req.file.filename,
+      tags, imageUrl,
       w: Number(req.body.w) || 0, h: Number(req.body.h) || 0,
       author: req.user.username, comments: [],
       searchBlob: buildSearchBlob({ title: req.body.title, room: req.body.room, style: req.body.style, tags, description: req.body.description }),
     });
     res.status(201).json({ post: withImageUrl(post) });
-  } catch (e) {
-    console.error(e);
-    if (req.file) { try { await fs2.unlink(path.join(UPLOADS, req.file.filename)); } catch {} }
-    res.status(500).json({ error: e.message || "Save failed." });
-  }
+  } catch (e) { console.error(e); res.status(500).json({ error: e.message || "Save failed." }); }
 });
 
 app.patch("/api/posts/:id/like", async (req, res) => {
@@ -191,7 +180,10 @@ app.delete("/api/posts/:id", authMiddleware, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ error: "Not found." });
-    if (post.imageFile) { try { await fs2.unlink(path.join(UPLOADS, post.imageFile)); } catch {} }
+    if (post.imageUrl && post.imageUrl.includes("cloudinary")) {
+      const pid = post.imageUrl.split("/").pop().split(".")[0];
+      try { await cloudinary.uploader.destroy("roomscore/" + pid); } catch {}
+    }
     await post.deleteOne();
     res.json({ ok: true });
   } catch (e) { console.error(e); res.status(500).json({ error: "Delete failed." }); }
@@ -268,14 +260,12 @@ app.post("/api/ai/generate", authMiddleware, async (req, res) => {
     const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
     if (imgBuffer.length < 1000) return res.status(502).json({ error: "AI returned an invalid image. Try a different prompt." });
 
-    const imageFile = nanoid() + ".jpg";
-    await fs2.writeFile(path.join(UPLOADS, imageFile), imgBuffer);
+    const filename = nanoid();
+    const imageUrl = await uploadToCloudinary(imgBuffer, filename);
 
     const tags = [style.toLowerCase(), room.toLowerCase().replace(/ /g, "-"), "ai-generated"];
-    const id = nanoid();
     const post = await Post.create({
-      _id: id, title, room, style, description: prompt, tags,
-      imageFile, imageUrl: "/uploads/" + imageFile,
+      _id: nanoid(), title, room, style, description: prompt, tags, imageUrl,
       w: 768, h: 768, author: req.user.username,
       aiGenerated: true, comments: [],
       searchBlob: buildSearchBlob({ title, room, style, tags, description: prompt }),
@@ -294,33 +284,25 @@ app.post("/api/posts/import", express.json({ limit: "80mb" }), async (req, res) 
   try {
     const { posts, replace } = req.body;
     if (!Array.isArray(posts)) return res.status(400).json({ error: "Expected { posts: [...] }." });
-    if (replace) {
-      const existing = await Post.find({}, "imageFile");
-      for (const p of existing) {
-        if (p.imageFile) { try { await fs2.unlink(path.join(UPLOADS, p.imageFile)); } catch {} }
-      }
-      await Post.deleteMany({});
-    }
+    if (replace) await Post.deleteMany({});
     for (const raw of posts) {
-      let imageFile = null;
-      const dataUrl = raw.imageDataUrl;
-      if (typeof dataUrl === "string" && dataUrl.startsWith("data:image")) {
-        const m = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/s);
+      const dataUrl = raw.imageDataUrl || raw.imageUrl;
+      if (!dataUrl) continue;
+      let imageUrl = dataUrl;
+      if (dataUrl.startsWith("data:image")) {
+        const m = dataUrl.match(/^data:image\/([\w]+);base64,(.+)$/s);
         if (m) {
-          const ext = m[1] === "jpeg" ? "jpg" : m[1];
-          imageFile = nanoid() + "." + ext;
-          await fs2.writeFile(path.join(UPLOADS, imageFile), Buffer.from(m[2], "base64"));
+          const buf = Buffer.from(m[2], "base64");
+          imageUrl = await uploadToCloudinary(buf, nanoid());
         }
       }
-      if (!imageFile) continue;
       const tags = Array.isArray(raw.tags) ? raw.tags : [];
-      const id = nanoid();
       await Post.create({
-        _id: id,
+        _id: nanoid(),
         title: String(raw.title || "Untitled").slice(0, 60),
         room: String(raw.room || "Other"), style: String(raw.style || "Other"),
         description: String(raw.description || "").slice(0, 400),
-        tags, imageFile, imageUrl: "/uploads/" + imageFile,
+        tags, imageUrl,
         w: Number(raw.w) || 0, h: Number(raw.h) || 0,
         createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : Date.now(),
         likes: Math.max(0, Number(raw.likes) || 0),
